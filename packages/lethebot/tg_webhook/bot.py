@@ -130,8 +130,14 @@ class LetheBot:
         total_chats = len(chats)
         marked_chats = len(data['chats'])
         selected_chat = None
+        owner = await self.tg_client.get_owner()
         for chat in chats:
-            if str(chat.id) not in data['chats']:
+            if str(chat.id) not in data['chats'] and chat.id not in [
+                self.bot.id,  # don't ask about itself
+                owner.id,  # don't ask about Saved messages
+                93372553,  # don't ask about Botfather
+                777000,  # don't ask about Telegram
+            ]:
                 selected_chat = chat
                 break
         keyboard = [
