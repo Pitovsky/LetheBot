@@ -145,7 +145,7 @@ class LetheBot:
         if update.callback_query:
             return await self.button_yesno(update, context)
 
-        if update.message.text == '/start':
+        if update.message.text.startswith('/start'):
             return await self.start(update, context)
         elif update.message.text == '/get_chat':
             return await self.get_chat(update, context)
