@@ -47,7 +47,11 @@ async def get_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(f'Is this a sensitive chat?\n{selected_chat.title}', reply_markup=reply_markup)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f'Is this a sensitive chat?\n{selected_chat.title}',
+        reply_markup=reply_markup
+    )
 
 
 async def button_yesno(update, context):
@@ -61,12 +65,15 @@ async def button_yesno(update, context):
             'id': callback_data['chat_id'],
             'is_sensitive': True
         }
+        await query.edit_message_text(query.message.text + "\n\nYes")
     elif callback_data['action'] == 'no':
         data.get('chats')[callback_data['chat_id']] = {
             'id': callback_data['chat_id'],
             'is_sensitive': False
         }
+        await query.edit_message_text(query.message.text + "\n\nNo")
     await tg_client._write_saved_message(data)
+    await get_chat(update, context)
 
 
 async def mark_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
