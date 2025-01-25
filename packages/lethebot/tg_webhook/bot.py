@@ -1,11 +1,17 @@
 import logging
+import json
 import os
 
-from telegram import Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update
+)
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
     CommandHandler,
+    CallbackQueryHandler,
 )
 
 from tg_client import TgClient
@@ -22,8 +28,45 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         rf"Hi {user.mention_html()}!",
     )
 
-async def chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    print(await tg_client._read_saved_message())
+async def get_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    data = await tg_client._read_saved_message()
+    chats = await tg_client.get_chats()
+    selected_chat = None
+    for chat in chats:
+        if str(chat.id) not in data['chats']:
+            selected_chat = chat
+            break
+    keyboard = [
+        [
+            InlineKeyboardButton("Yes", callback_data=json.dumps(
+                {'action': 'yes', 'chat_id': selected_chat.id}
+            )),
+            InlineKeyboardButton("No", callback_data=json.dumps(
+                {'action': 'no', 'chat_id': selected_chat.id}
+            ))
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(f'Is this a sensitive chat?\n{selected_chat.title}', reply_markup=reply_markup)
+
+
+async def button_yesno(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    callback_data = json.loads(query.data)
+    data = await tg_client._read_saved_message()
+    if callback_data['action'] == 'yes':
+        data.get('chats')[callback_data['chat_id']] = {
+            'id': callback_data['chat_id'],
+            'is_sensitive': True
+        }
+    elif callback_data['action'] == 'no':
+        data.get('chats')[callback_data['chat_id']] = {
+            'id': callback_data['chat_id'],
+            'is_sensitive': False
+        }
+    await tg_client._write_saved_message(data)
 
 
 async def mark_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -51,7 +94,8 @@ def get_bot(token: str):
     )
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("chats", chats))
+    application.add_handler(CommandHandler("get_chat", get_chat))
     application.add_handler(CommandHandler("mark", mark_chat))
+    application.add_handler(CallbackQueryHandler(button_yesno))
 
     return application
