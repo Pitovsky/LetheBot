@@ -26,6 +26,21 @@ async def chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     print(await tg_client._read_saved_message())
 
 
+async def mark_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    tokens = update.message.text.strip().split(maxsplit=2)
+    assert len(tokens) == 2
+    chat_id = tokens[1]
+
+    data = await tg_client._read_saved_message()
+    if chat_id in data.get('chats', {}):
+        del data.get('chats')[chat_id]
+    else:
+        data.get('chats')[chat_id] = {
+            'id': chat_id
+        }
+    await tg_client._write_saved_message(data)
+
+
 def get_bot(token: str):
     application = (
         ApplicationBuilder()
@@ -37,5 +52,6 @@ def get_bot(token: str):
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("chats", chats))
+    application.add_handler(CommandHandler("mark", mark_chat))
 
     return application
