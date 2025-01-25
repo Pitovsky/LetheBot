@@ -12,6 +12,8 @@ from telegram.ext import (
     ContextTypes,
     CommandHandler,
     CallbackQueryHandler,
+    MessageHandler,
+    filters,
 )
 
 from tg_client import TgClient
@@ -130,6 +132,21 @@ class LetheBot:
         await tg_client._write_saved_message(data)
 
 
+    async def _reply_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.callback_query:
+            return await self.button_yesno(update, context)
+
+        if update.message.text == '/start':
+            return await self.start(update, context)
+        elif update.message.text == '/get_chat':
+            return await self.get_chat(update, context)
+        elif update.message.text == '/clear':
+            return await self.clear_saved_message(update, context)
+        elif update.message.text == '/mark':
+            return await self.mark_chat(update, context)
+        print(f'unhandled update {update}')
+
+
     def get_bot(self, token: str):
         application = (
             ApplicationBuilder()
@@ -138,11 +155,8 @@ class LetheBot:
             .concurrent_updates(True)
             .build()
         )
+        application.add_handler(MessageHandler(filters.ALL, self._reply_handler))
 
-        application.add_handler(CommandHandler("start", self.start))
-        application.add_handler(CommandHandler("get_chat", self.get_chat))
-        application.add_handler(CommandHandler("clear", self.clear_saved_message))
-        application.add_handler(CommandHandler("mark", self.mark_chat))
-        application.add_handler(CallbackQueryHandler(self.button_yesno))
+        application.add_handler(CallbackQueryHandler(self._reply_handler))
 
         return application
