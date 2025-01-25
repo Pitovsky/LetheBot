@@ -4,6 +4,7 @@ import os
 from typing import Optional
 
 from telegram import (
+    constants,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
@@ -133,9 +134,23 @@ class LetheBot:
             del data.get('chats')[chat_id]
         else:
             data.get('chats')[chat_id] = {
-                'id': chat_id
+                'id': int(chat_id),
+                'is_sensitive': True
             }
         await tg_client._write_saved_message(data)
+
+
+    async def get_restore_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        data = await tg_client._read_saved_message()
+        sensitive_chats = [chat for chat in data["chats"].values() if chat["is_sensitive"]]
+        info = [f'You have {len(sensitive_chats)} chats to be restored']
+        for chat in sensitive_chats:
+            chat_description = await tg_client.get_chat_description(chat['id'])
+            # print(chat_description)
+            if chat_description:
+                info.append(chat_description)
+        # print(info)
+        await update.message.reply_text('\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
 
 
     async def _reply_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -151,8 +166,10 @@ class LetheBot:
             return await self.get_chat(update, context)
         elif update.message.text == '/clear':
             return await self.clear_saved_message(update, context)
-        elif update.message.text == '/mark':
+        elif update.message.text.startswith('/mark'):
             return await self.mark_chat(update, context)
+        elif update.message.text == '/get_restore_info':
+            return await self.get_restore_info(update, context)
         print(f'unhandled update {update}')
 
 
