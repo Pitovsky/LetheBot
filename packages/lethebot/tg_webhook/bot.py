@@ -21,28 +21,30 @@ from telegram.ext import (
 
 from tg_client import TgClient
 
-session = os.environ.get('TG_SESSION_STR')
-api_id = os.environ.get('TG_API_ID')
-api_hash = os.environ.get('TG_API_HASH')
-tg_client = TgClient(session, api_id, api_hash)
-invite_code = os.environ.get('INVITE_CODE')
-
 
 class LetheBot:
 
     bot: Optional[Bot]
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def __init__(self):
+        self.session = os.environ.get('TG_SESSION_STR')
+        self.api_id = os.environ.get('TG_API_ID')
+        self.api_hash = os.environ.get('TG_API_HASH')
+        self.tg_client = TgClient(self.session, self.api_id, self.api_hash)
+        self.invite_code = os.environ.get('INVITE_CODE')
+        self.bot = None
+
+    async def start(self, update: Update, ctx) -> None:
         """Send a message when the command /start is issued."""
         user = update.effective_user
-        owner = await tg_client.get_owner()
+        owner = await self.tg_client.get_owner()
         if user.id == owner.id:
             await update.message.reply_html(
-                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{self.bot.username}?start={invite_code}",
+                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{self.bot.username}?start={self.invite_code}",
             )
         else:
-            params = context.args # TODO parse from msg for webhooks
-            if invite_code in params:
+            code = update.message.text[len('/start'):].strip()
+            if self.invite_code == code:
                 await update.message.reply_html(
                     rf"Hi {user.mention_html()}! Someone trusted you with their data",
                 )
@@ -57,11 +59,11 @@ class LetheBot:
                 )
 
     async def add_to_trusted(self, user_id: int):
-        data = await tg_client._read_saved_message()
+        data = await self.tg_client._read_saved_message()
         data['trusted'][user_id] = {
             'id': user_id
         }
-        await tg_client._write_saved_message(data)
+        await self.tg_client._write_saved_message(data)
 
     def generate_progress_bar(self, done, total, length=50, bar_char='█', empty_char=' '):
         progress = int((done / total) * length)
@@ -70,9 +72,9 @@ class LetheBot:
         
         return f"Progress [{bar}{empty}] ({done}/{total})"
 
-    async def get_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        data = await tg_client._read_saved_message()
-        chats = await tg_client.get_chats()
+    async def get_chat(self, update: Update, ctx) -> None:
+        data = await self.tg_client._read_saved_message()
+        chats = await self.tg_client.get_chats()
         total_chats = len(chats)
         marked_chats = len(data['chats'])
         selected_chat = None
@@ -98,8 +100,8 @@ class LetheBot:
         )
 
 
-    async def clear_saved_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await tg_client._clear_saved_message()
+    async def clear_saved_message(self, update: Update, ctx):
+        await self.tg_client._clear_saved_message()
 
 
     async def button_yesno(self, update, context):
@@ -107,7 +109,7 @@ class LetheBot:
         await query.answer()
 
         callback_data = json.loads(query.data)
-        data = await tg_client._read_saved_message()
+        data = await self.tg_client._read_saved_message()
         if callback_data['action'] == 'yes':
             data.get('chats')[callback_data['chat_id']] = {
                 'id': callback_data['chat_id'],
@@ -120,16 +122,16 @@ class LetheBot:
                 'is_sensitive': False
             }
             await query.edit_message_text(query.message.text + "\n\nNo")
-        await tg_client._write_saved_message(data)
+        await self.tg_client._write_saved_message(data)
         await self.get_chat(update, context)
 
 
-    async def mark_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def mark_chat(self, update: Update, ctx) -> None:
         tokens = update.message.text.strip().split(maxsplit=2)
         assert len(tokens) == 2
         chat_id = tokens[1]
 
-        data = await tg_client._read_saved_message()
+        data = await self.tg_client._read_saved_message()
         if chat_id in data.get('chats', {}):
             del data.get('chats')[chat_id]
         else:
@@ -137,15 +139,15 @@ class LetheBot:
                 'id': int(chat_id),
                 'is_sensitive': True
             }
-        await tg_client._write_saved_message(data)
+        await self.tg_client._write_saved_message(data)
 
 
     async def get_restore_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        data = await tg_client._read_saved_message()
+        data = await self.tg_client._read_saved_message()
         sensitive_chats = [chat for chat in data["chats"].values() if chat["is_sensitive"]]
         info = [f'You have {len(sensitive_chats)} chats to be restored']
         for chat in sensitive_chats:
-            chat_description = await tg_client.get_chat_description(chat['id'])
+            chat_description = await self.tg_client.get_chat_description(chat['id'])
             # print(chat_description)
             if chat_description:
                 info.append(chat_description)

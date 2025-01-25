@@ -101,7 +101,6 @@ def main():
     if result.returncode != 0:
         exit(result.returncode)
     webhook_url = result.stdout.decode('utf-8').strip()
-    print(f'https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}') # TODO temp
 
     result = requests.post(f'https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}')
     if result.status_code != 200:

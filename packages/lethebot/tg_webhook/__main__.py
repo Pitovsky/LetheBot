@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 
+from dotenv import load_dotenv
 from bot import LetheBot
 from tg_client import TgClient
 
@@ -21,6 +22,7 @@ def main(args):
 
 
 if __name__ == '__main__':
+    load_dotenv('../../../keys.env')
     session = os.environ.get('TG_SESSION_STR')
     api_id = os.environ.get('TG_API_ID')
     api_hash = os.environ.get('TG_API_HASH')

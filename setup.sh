@@ -10,4 +10,4 @@ pip install -r requirements.txt
 python setup.py
 
 echo "Complete!"
-echo "All the further interaction happens through the bot, so you can safely remove this repo now."
+echo "All the further interaction happens through the bot, so you can safely remove this folder now."
