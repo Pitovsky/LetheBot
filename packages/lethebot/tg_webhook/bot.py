@@ -9,7 +9,8 @@ from telegram import (
     InlineKeyboardMarkup,
     Update,
     Bot,
-    CallbackQuery
+    CallbackQuery,
+    helpers,
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -40,23 +41,46 @@ class LetheBot:
         user = update.effective_user
         owner = await self.tg_client.get_owner()
         if user.id == owner.id:
-            await update.message.reply_html(
-                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{self.bot.username}?start={self.invite_code}",
+            await self._send_message(
+                update.effective_chat.id,
+                f"Hi {user.mention_markdown()}! I am Lethe (Ле́та)!\nI can hide you from sensitive chats.",
+            )
+            await self._send_message(
+                update.effective_chat.id,
+                f"Please send the following message to 2 people you trust.\nYou will be able to recover your chats if they tell me you are safe.",
+            )
+            await self._send_message(
+                update.effective_chat.id,
+                helpers.escape_markdown(f"Dear friend, please press here\nhttps://t.me/{self.bot.username}?start={self.invite_code}."),
+            )
+            keyboard = [
+                [
+                    InlineKeyboardButton("😎 Yes", callback_data=json.dumps(
+                        {'action': 'begin_review'}
+                    )),
+                ]
+            ]
+            await self._send_message(
+                update.effective_chat.id,
+                f"Are you ready to review your chats?",
+                reply_markup=keyboard,
             )
         else:
             code = update.message.text[len('/start'):].strip()
             if self.invite_code == code:
-                await update.message.reply_html(
-                    rf"Hi {user.mention_html()}! Someone trusted you with their data",
+                await self._send_message(
+                    update.effective_chat.id,
+                    f"Hi {user.mention_markdown()}!\n\nSomeone trusted you with their data",
                 )
                 await self.add_to_trusted(user.id)
-                await self.bot.send_message(
-                    chat_id=owner.id,
-                    text=f'added {user.mention_html()} as trusted user',
+                await self._send_message(
+                    owner.id,
+                    f"added {user.mention_markdown()} as trusted user",
                 )
             else:
-                await update.message.reply_html(
-                    rf"Hi {user.mention_html()}! I like cats",
+                await self._send_message(
+                    update.effective_chat.id,
+                    f"Hi {user.mention_markdown()}! I like cats",
                 )
 
     async def add_to_trusted(self, user_id: int):
@@ -118,9 +142,9 @@ class LetheBot:
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await self.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}',
+        await self._send_message(
+            update.effective_chat.id,
+            f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}',
             reply_markup=reply_markup
         )
 
@@ -130,6 +154,11 @@ class LetheBot:
 
 
     async def button_yesno(self, update: Update, query: CallbackQuery, callback_data: dict):
+        if callback_data['action'] == 'begin_review':
+            # TODO move begin_review and other actions to Enum
+            await self.get_chat(update)
+            return
+
         data = await self.tg_client._read_saved_message()
         if callback_data['action'] == 'yes':
             data.get('chats')[callback_data['chat_id']] = {
@@ -191,6 +220,9 @@ class LetheBot:
                 return # TODO safe vote
         elif update.message.text.startswith('/start'):
             return await self.start(update)
+
+        if update.message.text.startswith('/start'):
+            return await self.start(update, context)
         elif update.message.text == '/get_chat':
             return await self.get_chat(update)
         elif update.message.text == '/clear':
@@ -203,6 +235,31 @@ class LetheBot:
             return await self.handle_sos(update)
         print(f'unhandled update {update}')
 
+
+    async def _send_message(self, chat_id:int, text:str, reply_markup:InlineKeyboardMarkup=None):
+        data = await self.tg_client._read_saved_message()
+        if 'alarm_message_id' in data:
+            await self.bot.delete_message(chat_id=chat_id, message_id=data['alarm_message_id'])
+        await self.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=constants.ParseMode.MARKDOWN,
+        )
+        keyboard = [
+            [
+                InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'sos'}))
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        alarm_msg = await self.bot.send_message(
+            chat_id=chat_id,
+            text=f'🚨🚨🚨🚨🚨\n\n\nВ ЭКСТРЕННОЙ СИТУАЦИИ\nНАЖМИТЕ SOS\n\n\n🚨🚨🚨🚨🚨',
+            reply_markup=reply_markup,
+            parse_mode=constants.ParseMode.MARKDOWN,
+        )
+        data['alarm_message_id'] = alarm_msg.id
+        await self.tg_client._write_saved_message(data)
 
     def get_bot(self, token: str):
         application = (
