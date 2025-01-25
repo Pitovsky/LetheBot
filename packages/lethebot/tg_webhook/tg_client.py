@@ -28,6 +28,14 @@ class TgClient():
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
             await client.edit_message('me', self._message_id, json.dumps(data))
 
+    async def _clear_saved_message(self) -> None:
+        data = {
+            'chats': {},
+            'trusted': {},
+        }
+        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+            await client.edit_message('me', self._message_id, json.dumps(data))
+
     async def create_new_bot(self) -> None:
 
         def _extract_token(message):
