@@ -8,7 +8,9 @@ packages:
       TG_API_ID: '${TG_API_ID}',
       TG_API_HASH: '${TG_API_HASH}',
       TG_BOT_TOKEN: '${TG_BOT_TOKEN}',
-      INVITE_CODE: '${INVITE_CODE}'
+      INVITE_CODE: '${INVITE_CODE}',
+      DB_PASSWORD: '${DB_PASSWORD}',
+      DB_PATH: '${DB_PATH}'
     }
     functions:
       - name: tg_webhook

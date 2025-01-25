@@ -1,11 +1,13 @@
 import logging
 import json
 import os
+from typing import Optional
 
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    Update
+    Update,
+    Bot
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -23,25 +25,29 @@ api_id = os.environ.get('TG_API_ID')
 api_hash = os.environ.get('TG_API_HASH')
 tg_client = TgClient(session, api_id, api_hash)
 invite_code = os.environ.get('INVITE_CODE')
-owner_id = 1146226168
+
 
 class LetheBot:
+
+    bot: Optional[Bot]
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Send a message when the command /start is issued."""
         user = update.effective_user
-        if user.id == owner_id:
+        owner = await tg_client.get_owner()
+        if user.id == owner.id:
             await update.message.reply_html(
-                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{context.bot.username}?start=123",
+                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{self.bot.username}?start={invite_code}",
             )
         else:
-            params = context.args
+            params = context.args # TODO parse from msg for webhooks
             if invite_code in params:
                 await update.message.reply_html(
                     rf"Hi {user.mention_html()}! Someone trusted you with their data",
                 )
                 await self.add_to_trusted(user.id)
-                await context.bot.send_message(
-                    chat_id=owner_id,
+                await self.bot.send_message(
+                    chat_id=owner.id,
                     text=f'added {user.mention_html()} as trusted user',
                 )
             else:
@@ -84,7 +90,7 @@ class LetheBot:
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await context.bot.send_message(
+        await self.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}',
             reply_markup=reply_markup
@@ -133,6 +139,9 @@ class LetheBot:
 
 
     async def _reply_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if self.bot is None:
+            self.bot = context.bot
+
         if update.callback_query:
             return await self.button_yesno(update, context)
 
@@ -160,3 +169,12 @@ class LetheBot:
         application.add_handler(CallbackQueryHandler(self._reply_handler))
 
         return application
+
+
+    async def process_single_webhook(self, token: str, request_json):
+        self.bot = Bot(token=token)
+        await self.bot.initialize()
+        if 'triggerType' in request_json:
+            pass # TODO scheduled batches go here
+        else:
+            await self._reply_handler(Update.de_json(data=request_json, bot=self.bot), context=None)

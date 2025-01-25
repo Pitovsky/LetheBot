@@ -8,14 +8,15 @@ from tg_client import TgClient
 logger = logging.getLogger(__name__)
 
 
-async def process_webhook(args):
+async def process_webhook(args, bot):
     pass
 
 
 def main(args):
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
     logger.info('Processing new msg')
-    asyncio.run(process_webhook(args))
+    bot = LetheBot()
+    asyncio.run(bot.process_single_webhook(os.environ.get('TG_BOT_TOKEN'), args))
     logger.info('Completed, shutting down')
 
 
