@@ -18,3 +18,6 @@ packages:
         runtime: python:3.9
         main: ""
         web: false
+        limits:
+          timeout: 30000
+          memory: 256
