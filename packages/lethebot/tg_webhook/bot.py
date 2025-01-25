@@ -28,9 +28,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         rf"Hi {user.mention_html()}!",
     )
 
+def generate_progress_bar(done, total, length=50, bar_char='█', empty_char=' '):
+    progress = int((done / total) * length)
+    bar = bar_char * progress
+    empty = empty_char * (length - progress)
+    
+    return f"Progress [{bar}{empty}] ({done}/{total})"
+
 async def get_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     data = await tg_client._read_saved_message()
     chats = await tg_client.get_chats()
+    total_chats = len(chats)
+    marked_chats = len(data['chats'])
     selected_chat = None
     for chat in chats:
         if str(chat.id) not in data['chats']:
@@ -38,10 +47,10 @@ async def get_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             break
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data=json.dumps(
+            InlineKeyboardButton("🚨Yes", callback_data=json.dumps(
                 {'action': 'yes', 'chat_id': selected_chat.id}
             )),
-            InlineKeyboardButton("No", callback_data=json.dumps(
+            InlineKeyboardButton("😺No", callback_data=json.dumps(
                 {'action': 'no', 'chat_id': selected_chat.id}
             ))
         ]
@@ -49,7 +58,7 @@ async def get_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'Is this a sensitive chat?\n{selected_chat.title}',
+        text=f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{generate_progress_bar(marked_chats, total_chats)}',
         reply_markup=reply_markup
     )
 
