@@ -3,6 +3,13 @@
 set -e
 
 echo "Setting up your own self-hosted Lethe."
+
+if ! command -v doctl 2>&1 >/dev/null
+then
+    echo "doctl could not be found, have you configured the DigitalOcean CLI?"
+    exit 1
+fi
+
 echo "Setting up Python environment..."
 python3 -m venv .venv
 source .venv/bin/activate

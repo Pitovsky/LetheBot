@@ -17,6 +17,12 @@ packages:
         runtime: python:3.9
         main: ""
         web: true
+        triggers:
+          - name: daily_batch
+            sourceType: scheduler
+            sourceDetails:
+              cron: '${SCHEDULE_CRON_UTC}'
+              withBody: '{"triggerType": "daily_batch"}'
         limits:
           timeout: 30000
           memory: 256

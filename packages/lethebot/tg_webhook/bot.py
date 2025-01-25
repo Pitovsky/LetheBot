@@ -8,7 +8,8 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
-    Bot
+    Bot,
+    CallbackQuery
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -34,7 +35,7 @@ class LetheBot:
         self.invite_code = os.environ.get('INVITE_CODE')
         self.bot = None
 
-    async def start(self, update: Update, ctx) -> None:
+    async def start(self, update: Update) -> None:
         """Send a message when the command /start is issued."""
         user = update.effective_user
         owner = await self.tg_client.get_owner()
@@ -72,7 +73,31 @@ class LetheBot:
         
         return f"Progress [{bar}{empty}] ({done}/{total})"
 
-    async def get_chat(self, update: Update, ctx) -> None:
+    async def handle_sos(self, update: Update) -> None:
+        data = await self.tg_client._read_saved_message()
+        chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
+        owner = await self.tg_client.get_owner()
+        data_serialised = self.tg_client._serialise_data(data)
+        keyboard = [
+            [
+                InlineKeyboardButton("I know it's safe now", callback_data=json.dumps(
+                    {'action': 'safe'}
+                ))
+            ]
+        ]
+        for user in data['trusted'].values():
+            await self.bot.send_message(chat_id=user['id'],
+                                        text=f'Your friend {owner.username} just pressed the red button to hide some chats.\n'
+                                             f'Please reach them out after some time, and press the button below '
+                                             f'when you\'re ABSOLUTELY sure they\'re safe.')
+            await self.bot.send_message(chat_id=user['id'],
+                                        text=data_serialised,
+                                        reply_markup=InlineKeyboardMarkup(keyboard))
+        await self.tg_client._write_placeholder_saved_message()
+        chat_ids.append(self.bot.id)  # commit suicide
+        await self.tg_client.leave_chats(chat_ids)
+
+    async def get_chat(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
         chats = await self.tg_client.get_chats()
         total_chats = len(chats)
@@ -100,15 +125,11 @@ class LetheBot:
         )
 
 
-    async def clear_saved_message(self, update: Update, ctx):
+    async def clear_saved_message(self, update: Update):
         await self.tg_client._clear_saved_message()
 
 
-    async def button_yesno(self, update, context):
-        query = update.callback_query
-        await query.answer()
-
-        callback_data = json.loads(query.data)
+    async def button_yesno(self, update: Update, query: CallbackQuery, callback_data: dict):
         data = await self.tg_client._read_saved_message()
         if callback_data['action'] == 'yes':
             data.get('chats')[callback_data['chat_id']] = {
@@ -123,10 +144,10 @@ class LetheBot:
             }
             await query.edit_message_text(query.message.text + "\n\nNo")
         await self.tg_client._write_saved_message(data)
-        await self.get_chat(update, context)
+        await self.get_chat(update)
 
 
-    async def mark_chat(self, update: Update, ctx) -> None:
+    async def mark_chat(self, update: Update) -> None:
         tokens = update.message.text.strip().split(maxsplit=2)
         assert len(tokens) == 2
         chat_id = tokens[1]
@@ -142,7 +163,7 @@ class LetheBot:
         await self.tg_client._write_saved_message(data)
 
 
-    async def get_restore_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def get_restore_info(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
         sensitive_chats = [chat for chat in data["chats"].values() if chat["is_sensitive"]]
         info = [f'You have {len(sensitive_chats)} chats to be restored']
@@ -160,18 +181,26 @@ class LetheBot:
             self.bot = context.bot
 
         if update.callback_query:
-            return await self.button_yesno(update, context)
-
-        if update.message.text.startswith('/start'):
-            return await self.start(update, context)
+            query = update.callback_query
+            await query.answer()
+            callback_data = json.loads(query.data)
+            action = callback_data['action']
+            if action == 'yes' or action == 'no':
+                return await self.button_yesno(update, query, callback_data)
+            elif action == 'safe':
+                return # TODO safe vote
+        elif update.message.text.startswith('/start'):
+            return await self.start(update)
         elif update.message.text == '/get_chat':
-            return await self.get_chat(update, context)
+            return await self.get_chat(update)
         elif update.message.text == '/clear':
-            return await self.clear_saved_message(update, context)
+            return await self.clear_saved_message(update)
         elif update.message.text.startswith('/mark'):
-            return await self.mark_chat(update, context)
+            return await self.mark_chat(update)
         elif update.message.text == '/get_restore_info':
-            return await self.get_restore_info(update, context)
+            return await self.get_restore_info(update)
+        elif update.message.text == '/sos':
+            return await self.handle_sos(update)
         print(f'unhandled update {update}')
 
 

@@ -78,18 +78,20 @@ def main():
             client.disconnect()
 
     invite_code = str(os.urandom(16).hex())
+    schedule_cron_utc = '25 19 * * *' # TODO localize from default tz
 
     with open('keys.env', 'w') as envfile:
         envfile.write(f"""
-            TG_API_ID={api_id}
-            TG_API_HASH={api_hash}
-            TG_BOT_TOKEN={bot_token}
-            TG_BOT_HANDLE={bot_handle}
-            TG_SESSION_STR={session_str}
-            INVITE_CODE={invite_code}
-            DB_PASSWORD={db_password}
-            DB_PATH={db_path}
-            """.replace(' ', ''))
+TG_API_ID={api_id}
+TG_API_HASH={api_hash}
+TG_BOT_TOKEN={bot_token}
+TG_BOT_HANDLE={bot_handle}
+TG_SESSION_STR={session_str}
+INVITE_CODE={invite_code}
+DB_PASSWORD={db_password}
+DB_PATH={db_path}
+SCHEDULE_CRON_UTC={schedule_cron_utc}
+""")
 
     print('Deploying the main function...')
     result = subprocess.run(['doctl', 'sls', 'deploy', '.', '--include', 'lethebot/tg_webhook', '--env', 'keys.env'])
