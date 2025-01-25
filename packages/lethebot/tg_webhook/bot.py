@@ -20,7 +20,7 @@ session = os.environ.get('TG_SESSION_STR')
 api_id = os.environ.get('TG_API_ID')
 api_hash = os.environ.get('TG_API_HASH')
 tg_client = TgClient(session, api_id, api_hash)
-invite_code = '1'
+invite_code = os.environ.get('INVITE_CODE')
 owner_id = 1146226168
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

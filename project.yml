@@ -7,17 +7,14 @@ packages:
       TG_SESSION_STR: '${TG_SESSION_STR}',
       TG_API_ID: '${TG_API_ID}',
       TG_API_HASH: '${TG_API_HASH}',
-      TG_BOT_TOKEN: '${TG_BOT_TOKEN}'
+      TG_BOT_TOKEN: '${TG_BOT_TOKEN}',
+      INVITE_CODE: '${INVITE_CODE}'
     }
     functions:
       - name: tg_webhook
         runtime: python:3.9
         main: ""
         web: true
-      - name: setup
-        runtime: python:3.9
-        main: ""
-        web: false
         limits:
           timeout: 30000
           memory: 256
