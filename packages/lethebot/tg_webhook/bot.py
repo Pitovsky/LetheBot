@@ -9,7 +9,8 @@ from telegram import (
     InlineKeyboardMarkup,
     Update,
     Bot,
-    CallbackQuery
+    CallbackQuery,
+    helpers,
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -40,23 +41,49 @@ class LetheBot:
         user = update.effective_user
         owner = await self.tg_client.get_owner()
         if user.id == owner.id:
-            await update.message.reply_html(
-                rf"Hi {user.mention_html()}!\n\nSend this message to trusted contacts. https://t.me/{self.bot.username}?start={self.invite_code}",
+            await self._send_message(
+                update.effective_chat.id,
+                f"Hi {user.mention_markdown()}! I am Lethe (Ле́та)!\nI can hide you from sensitive chats.",
+                update_alarm_message=False,
+            )
+            await self._send_message(
+                update.effective_chat.id,
+                f"Please send the following message to 2 people you trust.\nYou will be able to recover your chats if they tell me you are safe.",
+                update_alarm_message=False,
+            )
+            await self._send_message(
+                update.effective_chat.id,
+                helpers.escape_markdown(f"Dear friend, please press here\nhttps://t.me/{self.bot.username}?start={self.invite_code}."),
+                update_alarm_message=False,
+            )
+            keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("😎 Yes", callback_data=json.dumps(
+                        {'action': 'begin_review'}
+                    )),
+                ]
+            ])
+            await self._send_message(
+                update.effective_chat.id,
+                f"Are you ready to review your chats?",
+                reply_markup=keyboard,
             )
         else:
             code = update.message.text[len('/start'):].strip()
             if self.invite_code == code:
-                await update.message.reply_html(
-                    rf"Hi {user.mention_html()}! Someone trusted you with their data",
+                await self._send_message(
+                    update.effective_chat.id,
+                    f"Hi {user.mention_markdown()}!\n\nSomeone trusted you with their data",
                 )
                 await self.add_to_trusted(user.id)
-                await self.bot.send_message(
-                    chat_id=owner.id,
-                    text=f'added {user.mention_html()} as trusted user',
+                await self._send_message(
+                    owner.id,
+                    f"added {user.mention_markdown()} as trusted user",
                 )
             else:
-                await update.message.reply_html(
-                    rf"Hi {user.mention_html()}! I like cats",
+                await self._send_message(
+                    update.effective_chat.id,
+                    f"Hi {user.mention_markdown()}! I like cats",
                 )
 
     async def add_to_trusted(self, user_id: int):
@@ -139,8 +166,14 @@ class LetheBot:
         total_chats = len(chats)
         marked_chats = len(data['chats'])
         selected_chat = None
+        owner = await self.tg_client.get_owner()
         for chat in chats:
-            if str(chat.id) not in data['chats']:
+            if str(chat.id) not in data['chats'] and chat.id not in [
+                self.bot.id,  # don't ask about itself
+                owner.id,  # don't ask about Saved messages
+                93372553,  # don't ask about Botfather
+                777000,  # don't ask about Telegram
+            ]:
                 selected_chat = chat
                 break
         keyboard = [
@@ -154,9 +187,9 @@ class LetheBot:
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await self.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}',
+        await self._send_message(
+            update.effective_chat.id,
+            helpers.escape_markdown(f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}'),
             reply_markup=reply_markup
         )
 
@@ -223,6 +256,8 @@ class LetheBot:
             action = callback_data['action']
             if action == 'yes' or action == 'no':
                 return await self.button_yesno(update, query, callback_data)
+            elif action == 'begin_review':
+                return await self.get_chat(update)
             elif action == 'safe':
                 return await self.safe_vote(update, query, callback_data)
         elif update.message.text.startswith('/start'):
@@ -239,6 +274,35 @@ class LetheBot:
             return await self.handle_sos(update)
         print(f'unhandled update {update}')
 
+
+    async def _send_message(self, chat_id:int, text:str, reply_markup:InlineKeyboardMarkup=None, update_alarm_message=True):
+        data = await self.tg_client._read_saved_message()
+        if 'alarm_message_id' in data and update_alarm_message:
+            try:
+                await self.bot.delete_message(chat_id=chat_id, message_id=data['alarm_message_id'])
+            except BaseException as e:
+                pass
+        await self.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=constants.ParseMode.MARKDOWN,
+        )
+        if update_alarm_message:
+            keyboard = [
+                [
+                    InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'sos'}))
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            alarm_msg = await self.bot.send_message(
+                chat_id=chat_id,
+                text=f'🚨🚨🚨🚨🚨\n\n\nВ ЭКСТРЕННОЙ СИТУАЦИИ\nНАЖМИТЕ SOS\n\n\n🚨🚨🚨🚨🚨',
+                reply_markup=reply_markup,
+                parse_mode=constants.ParseMode.MARKDOWN,
+            )
+            data['alarm_message_id'] = alarm_msg.id
+            await self.tg_client._write_saved_message(data)
 
     def get_bot(self, token: str):
         application = (
