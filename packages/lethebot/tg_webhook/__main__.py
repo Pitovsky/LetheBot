@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 
-from bot import get_bot
+from bot import LetheBot
 from tg_client import TgClient
 
 logger = logging.getLogger(__name__)
@@ -23,5 +23,5 @@ if __name__ == '__main__':
     session = os.environ.get('TG_SESSION_STR')
     api_id = os.environ.get('TG_API_ID')
     api_hash = os.environ.get('TG_API_HASH')
-    bot = get_bot(os.environ.get('TG_BOT_TOKEN'))
+    bot = LetheBot().get_bot(os.environ.get('TG_BOT_TOKEN'))
     bot.run_polling()
