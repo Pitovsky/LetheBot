@@ -1,0 +1,13 @@
+parameters: {}
+environment: {}
+packages:
+  - name: lethebot
+    shared: false
+    environment: {
+      TG_API_KEY: '${TG_API_KEY}'
+    }
+    functions:
+      - name: tg_webhook
+        runtime: python:3.9
+        main: ""
+        web: true
