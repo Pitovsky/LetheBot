@@ -20,6 +20,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telethon.types import Chat
 
 from tg_client import TgClient
 
@@ -187,10 +188,16 @@ class LetheBot:
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        message_parts = [
+            f'Is this a sensitive chat?\n{selected_chat.title or selected_chat.id}',
+            f'{self.generate_progress_bar(marked_chats, total_chats)}'
+        ]
+        if isinstance(selected_chat.entity, Chat) and selected_chat.entity.admin_rights is not None:
+            message_parts.append(f'*Caution, you are the admin of that chat*')
         await self._send_message(
             update.effective_chat.id,
-            helpers.escape_markdown(f'Is this a sensitive chat?\n💬{selected_chat.title or selected_chat.id}\n\n{self.generate_progress_bar(marked_chats, total_chats)}'),
-            reply_markup=reply_markup
+            '\n\n'.join(message_parts),
+            reply_markup=reply_markup,
         )
 
 
