@@ -31,7 +31,11 @@ class TgClient():
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
             return await client.get_dialogs()
 
-    async def leave_chats(self, chat_ids: list[str]) -> None:
+    async def leave_chat_silently(self, chat_id: str):
+        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+            await client.delete_dialog(chat_id)
+
+    async def leave_chats(self, chat_ids: list[int]) -> None:
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
             for chat_id in chat_ids:
                 entity = await client.get_entity(chat_id)
@@ -91,7 +95,7 @@ class TgClient():
             message = await client.get_messages('me', ids=self._message_id)
             if message.text == '🦥':
                 return self._empty_data()
-            return json.loads(message.text)
+            return self._deserialise_data(message.text)
 
     async def _write_saved_message(self, data: dict) -> None:
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
@@ -102,9 +106,12 @@ class TgClient():
             await client.edit_message('me', self._message_id, json.dumps(self._empty_data()))
 
     async def _write_placeholder_saved_message(self) -> None:
-        placeholder = random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭'])
+        placeholder = random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭']) + random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭'])
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
             await client.edit_message('me', self._message_id, placeholder)
+
+    def _deserialise_data(self, data_str: str) -> dict:
+        return json.loads(data_str)
 
     def _serialise_data(self, data: dict) -> str:
         return json.dumps(data)

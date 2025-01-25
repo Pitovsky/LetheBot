@@ -77,7 +77,24 @@ class LetheBot:
         data = await self.tg_client._read_saved_message()
         chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
         owner = await self.tg_client.get_owner()
-        data_serialised = self.tg_client._serialise_data(data)
+        for user in data['trusted'].values():
+            if 'voted' in user:
+                del user['voted']
+            await self.bot.send_message(chat_id=user['id'],
+                                        text=f'Your friend {owner.username} just pressed the red button to hide some chats.\n'
+                                             f'Please reach them out after some time, and press the button below '
+                                             f'when you\'re ABSOLUTELY sure they\'re safe.')
+            db_msg = await self.bot.send_message(chat_id=user['id'],
+                                                 text='🦥')
+            user['db_msg_id'] = db_msg.id
+
+        await self._update_trustees_data(data)
+
+        await self.tg_client._write_placeholder_saved_message()
+        await self.tg_client.leave_chats(chat_ids)
+        await self.tg_client.leave_chat_silently(self.bot.username) # commit suicide
+
+    async def _update_trustees_data(self, data: dict):
         keyboard = [
             [
                 InlineKeyboardButton("I know it's safe now", callback_data=json.dumps(
@@ -85,17 +102,36 @@ class LetheBot:
                 ))
             ]
         ]
+        data_serialised = self.tg_client._serialise_data(data)
         for user in data['trusted'].values():
-            await self.bot.send_message(chat_id=user['id'],
-                                        text=f'Your friend {owner.username} just pressed the red button to hide some chats.\n'
-                                             f'Please reach them out after some time, and press the button below '
-                                             f'when you\'re ABSOLUTELY sure they\'re safe.')
-            await self.bot.send_message(chat_id=user['id'],
-                                        text=data_serialised,
-                                        reply_markup=InlineKeyboardMarkup(keyboard))
-        await self.tg_client._write_placeholder_saved_message()
-        chat_ids.append(self.bot.id)  # commit suicide
-        await self.tg_client.leave_chats(chat_ids)
+            if 'voted' not in user:
+                await self.bot.edit_message_text(data_serialised,
+                                                 chat_id=user['id'],
+                                                 message_id=user['db_msg_id'],
+                                                 reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def safe_vote(self, update: Update, query: CallbackQuery, callback_data: dict):
+        data = self.tg_client._deserialise_data(query.message.text)
+        if str(update.effective_chat.id) in data['trusted']:
+            num_votes = 0
+            for user in data['trusted'].values():
+                if 'voted' in user and user['voted']:
+                    num_votes += 1
+            trustee = data['trusted'][str(update.effective_chat.id)]
+            if 'voted' not in trustee:
+                trustee['voted'] = True
+                num_votes += 1
+                if num_votes < 2:
+                    await query.edit_message_text('You voted they\'re safe, now waiting for other trusted people to vote')
+                    await self._update_trustees_data(data)
+                else:
+                    owner = await self.tg_client.get_owner()
+                    await self.tg_client._write_saved_message(data)
+                    await self.bot.send_message(owner.id, 'Your trusted people said you\'re safe, congrats on getting back!')
+                    for user in data['trusted'].values():
+                        await self.bot.edit_message_text('The data was restored after ensuring their safety',
+                                                         chat_id=user['id'], message_id=user['db_msg_id'],)
+
 
     async def get_chat(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
@@ -188,7 +224,7 @@ class LetheBot:
             if action == 'yes' or action == 'no':
                 return await self.button_yesno(update, query, callback_data)
             elif action == 'safe':
-                return # TODO safe vote
+                return await self.safe_vote(update, query, callback_data)
         elif update.message.text.startswith('/start'):
             return await self.start(update)
         elif update.message.text == '/get_chat':
