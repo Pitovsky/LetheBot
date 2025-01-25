@@ -8,7 +8,12 @@ from telegram.ext import (
     CommandHandler,
 )
 
-from telethon_utils import read_saved_message
+from tg_client import TgClient
+
+session = os.environ.get('TG_SESSION_STR')
+api_id = os.environ.get('TG_API_ID')
+api_hash = os.environ.get('TG_API_HASH')
+tg_client = TgClient(session, api_id, api_hash)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
@@ -18,10 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    session = os.environ.get('TG_SESSION_STR')
-    api_id = os.environ.get('TG_API_ID')
-    api_hash = os.environ.get('TG_API_HASH')
-    print(await read_saved_message(session, api_id, api_hash))
+    print(await tg_client._read_saved_message())
 
 
 def get_bot(token: str):
