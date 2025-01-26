@@ -52,7 +52,7 @@ class TgClient():
                                               'Hope to see you all again later, but now I need to drink from Lethe.')
                 await client.delete_dialog(entity)
 
-    async def get_chat_data(self, chat_id: int) -> dict:
+    async def get_chat_data(self, chat_id: int, is_sensitive: bool) -> dict:
         try:
             async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
                 entity = await client.get_entity(chat_id)
@@ -62,6 +62,7 @@ class TgClient():
                         "id": chat_id,
                         "title": "{entity.first_name} {entity.last_name}",
                         "public_link": public_link,
+                        'is_sensitive': is_sensitive,
                     }
                 if isinstance(entity, Channel):
                     if entity.username:
@@ -69,6 +70,7 @@ class TgClient():
                             "id": chat_id,
                             "title": entity.title,
                             "public_link": f"https://t.me/{entity.username}",
+                            'is_sensitive': is_sensitive,
                         }
                     try:
                         invite = await client(functions.messages.ExportChatInviteRequest(entity))
@@ -76,6 +78,7 @@ class TgClient():
                             "id": chat_id,
                             "title": entity.title,
                             "invite_link": invite.link,
+                            'is_sensitive': is_sensitive,
                         }
                     except errors.rpcerrorlist.ChatAdminRequiredError as e:
                         # not enough rights to get invite link
@@ -87,6 +90,7 @@ class TgClient():
                                 "id": chat_id,
                                 "title": "{entity.first_name} {entity.last_name}",
                                 "admin": public_link,
+                                'is_sensitive': is_sensitive,
                             }
                 if isinstance(entity, Chat):
                     try:
@@ -95,6 +99,7 @@ class TgClient():
                             "id": chat_id,
                             "title": entity.title,
                             "invite_link": invite.link,
+                            'is_sensitive': is_sensitive,
                         }
                     except errors.rpcerrorlist.ChatAdminRequiredError as e:
                         # not enough rights to get invite link
@@ -106,10 +111,21 @@ class TgClient():
                                 "id": chat_id,
                                 "title": "{entity.first_name} {entity.last_name}",
                                 "admin": public_link,
+                                'is_sensitive': is_sensitive,
                             }
         except BaseException as e:
             logger.error(f'get_chat_data for {chat_id}', exc_info=e)
-            return {"id": chat_id}
+            return {"id": chat_id, 'is_sensitive': is_sensitive,}
+
+    def render_chat(self, chat_data: dict) -> str:
+        if 'is_sensitive' in chat_data:
+            if 'public_link' in chat_data:
+                return f'{chat_data["title"]} {chat_data["public_link"]}'
+            if 'invite_link' in chat_data:
+                return f'{chat_data["title"]} [invite link]({chat_data["public_link"]})'
+            if 'admin' in chat_data:
+                return f'{chat_data["title"]} {chat_data["admin"]}'
+            return f'{chat_data["title"]} {chat_data["id"]}'
 
     async def get_chat_description(self, chat_id) -> str:
         try:
