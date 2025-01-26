@@ -160,7 +160,6 @@ class LetheBot:
                     await self._update_trustees_data(data)
                 else:
                     owner = await self.tg_client.get_owner()
-                    await self.tg_client._write_saved_message(data)
                     await self.bot.send_message(owner.id, 'Your trusted people said you\'re safe, congrats on getting back!')
                     info = []
                     print(data["chats_data"])
@@ -172,7 +171,22 @@ class LetheBot:
                             info.append(chat_description)
                     print('info')
                     print(info)
+                    del data["chats_data"]
+                    await self.tg_client._write_saved_message(data)
                     await self.bot.send_message(owner.id, '\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
+                    await self.bot.send_message(owner.id, 'Feel free to return to any chats you want.\n\nI will continue to keep you safe.')
+                    keyboard = InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("😎 Yes", callback_data=json.dumps(
+                                {'action': 'begin_review'}
+                            )),
+                        ]
+                    ])
+                    await self._send_message(
+                        owner.id,
+                        f"Are you ready to review more chats?",
+                        reply_markup=keyboard,
+                    )
                     for user in data['trusted'].values():
                         await self.bot.edit_message_text('The data was restored after ensuring their safety',
                                                          chat_id=user['id'], message_id=user['db_msg_id'],)
