@@ -107,8 +107,9 @@ class LetheBot:
     async def handle_sos(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
         chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
+        data["chats_data"] = {}
         for chat in data["chats"].values():
-            data["chats"][str(chat['id'])] = await self.tg_client.get_chat_data(chat['id'], chat["is_sensitive"])
+            data["chats_data"][str(chat['id'])] = await self.tg_client.get_chat_data(chat['id'], chat["is_sensitive"])
         owner = await self.tg_client.get_owner()
         for user in data['trusted'].values():
             if 'voted' in user:
@@ -162,13 +163,16 @@ class LetheBot:
                     await self.tg_client._write_saved_message(data)
                     await self.bot.send_message(owner.id, 'Your trusted people said you\'re safe, congrats on getting back!')
                     info = []
-                    for chat in data["chats"]:
+                    print(data["chats_data"])
+                    for chat in data["chats_data"].values():
                         chat_description = self.tg_client.render_chat(chat)
-                        # print(chat_description)
+                        print('chat description')
+                        print(chat_description)
                         if chat_description:
                             info.append(chat_description)
-                    # print(info)
-                    await update.message.reply_text('\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
+                    print('info')
+                    print(info)
+                    await self.bot.send_message(owner.id, '\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
                     for user in data['trusted'].values():
                         await self.bot.edit_message_text('The data was restored after ensuring their safety',
                                                          chat_id=user['id'], message_id=user['db_msg_id'],)

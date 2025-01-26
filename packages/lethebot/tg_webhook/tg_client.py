@@ -118,11 +118,11 @@ class TgClient():
             return {"id": chat_id, 'is_sensitive': is_sensitive,}
 
     def render_chat(self, chat_data: dict) -> str:
-        if 'is_sensitive' in chat_data:
+        if chat_data.get('is_sensitive'):
             if 'public_link' in chat_data:
                 return f'{chat_data["title"]} {chat_data["public_link"]}'
             if 'invite_link' in chat_data:
-                return f'{chat_data["title"]} [invite link]({chat_data["public_link"]})'
+                return f'{chat_data["title"]} [invite link]({chat_data["invite_link"]})'
             if 'admin' in chat_data:
                 return f'{chat_data["title"]} {chat_data["admin"]}'
             return f'{chat_data["title"]} {chat_data["id"]}'
