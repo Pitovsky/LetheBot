@@ -282,6 +282,8 @@ class LetheBot:
                 return await self.button_yesno(update, query, callback_data)
             elif action == 'begin_review':
                 return await self.get_chat(update)
+            elif action == 'button_sos':
+                return await self.handle_sos(update)
             elif action == 'safe':
                 return await self.safe_vote(update, query, callback_data)
         elif update.message.text.startswith('/start'):
@@ -315,7 +317,7 @@ class LetheBot:
         if update_alarm_message:
             keyboard = [
                 [
-                    InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'sos'}))
+                    InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'button_sos'}))
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
