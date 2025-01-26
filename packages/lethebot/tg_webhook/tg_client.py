@@ -56,11 +56,12 @@ class TgClient():
         try:
             async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
                 entity = await client.get_entity(chat_id)
+                print(entity)
                 if isinstance(entity, User):
                     public_link = entity.username or f"[{entity.first_name} {entity.last_name}](https://web.telegram.org/a/#{chat_id})"
                     return {
                         "id": chat_id,
-                        "title": "{entity.first_name} {entity.last_name}",
+                        "title": f"{entity.first_name} {entity.last_name}",
                         "public_link": public_link,
                         'is_sensitive': is_sensitive,
                     }
@@ -81,15 +82,23 @@ class TgClient():
                             'is_sensitive': is_sensitive,
                         }
                     except errors.rpcerrorlist.ChatAdminRequiredError as e:
-                        # not enough rights to get invite link
-                        user_iter = client.iter_participants(entity, filter=ChannelParticipantsAdmins, limit=1)
-                        async for user in user_iter:
-                            # any one will do
-                            public_link = user.username or f"[{user.first_name} {user.last_name}](https://web.telegram.org/a/#{user.id})"
+                        try:
+                            # not enough rights to get invite link
+                            user_iter = client.iter_participants(entity, filter=ChannelParticipantsAdmins, limit=1)
+                            async for user in user_iter:
+                                # any one will do
+                                public_link = user.username or f"[{user.first_name} {user.last_name}](https://web.telegram.org/a/#{user.id})"
+                                return {
+                                    "id": chat_id,
+                                    "title": entity.title,
+                                    "admin": public_link,
+                                    'is_sensitive': is_sensitive,
+                                }
+                        except errors.rpcerrorlist.ChatAdminRequiredError:
+                            # even can't see other participants or admins
                             return {
                                 "id": chat_id,
-                                "title": "{entity.first_name} {entity.last_name}",
-                                "admin": public_link,
+                                "title": entity.title,
                                 'is_sensitive': is_sensitive,
                             }
                 if isinstance(entity, Chat):
@@ -109,13 +118,13 @@ class TgClient():
                             public_link = user.username or f"[{user.first_name} {user.last_name}](https://web.telegram.org/a/#{user.id})"
                             return {
                                 "id": chat_id,
-                                "title": "{entity.first_name} {entity.last_name}",
+                                "title": entity.title,
                                 "admin": public_link,
                                 'is_sensitive': is_sensitive,
                             }
         except BaseException as e:
             logger.error(f'get_chat_data for {chat_id}', exc_info=e)
-            return {"id": chat_id, 'is_sensitive': is_sensitive,}
+            return {"id": chat_id, 'title': str(chat_id), 'is_sensitive': is_sensitive,}
 
     def render_chat(self, chat_data: dict) -> str:
         if chat_data.get('is_sensitive'):

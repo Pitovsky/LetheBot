@@ -25,6 +25,9 @@ from telethon.types import Chat
 from tg_client import TgClient
 
 
+logger = logging.getLogger(__name__)
+
+
 class LetheBot:
 
     bot: Optional[Bot]
@@ -275,10 +278,14 @@ class LetheBot:
         sensitive_chats = [chat for chat in data["chats"].values() if chat["is_sensitive"]]
         info = [f'You have {len(sensitive_chats)} chats to be restored']
         for chat in sensitive_chats:
-            chat_description = await self.tg_client.get_chat_description(chat['id'])
-            # print(chat_description)
-            if chat_description:
-                info.append(chat_description)
+            try:
+                chat_description = await self.tg_client.get_chat_data(chat['id'], True)
+                # print(chat_description)
+                if chat_description:
+                    info.append(chat_description)
+            except BaseException as e:
+                logger.warning(f'failed to generate chat description for {str(chat)}', exc_info=e)
+                pass
         # print(info)
         await update.message.reply_text('\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
 
