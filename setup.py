@@ -4,6 +4,7 @@ import re
 import time
 import random
 import subprocess
+import base64
 from getpass import getpass
 
 import requests
@@ -73,7 +74,7 @@ def main():
             if db_path is None:
                 print('Initializing database...')
                 db_path = client.loop.run_until_complete(init_db(client))
-                db_password = str(os.urandom(32).hex())
+                db_password = base64.urlsafe_b64encode(os.urandom(32)).decode()
         finally:
             client.disconnect()
 

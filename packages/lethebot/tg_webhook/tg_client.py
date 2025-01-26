@@ -2,7 +2,11 @@ import json
 import logging
 import os
 import random
+import base64
+import zlib
+import io
 
+from cryptography.fernet import Fernet
 from telethon import TelegramClient, functions, errors
 from telethon.types import User, Channel, Chat
 from telethon.tl.types import ChannelParticipantsAdmins
@@ -20,6 +24,7 @@ class TgClient():
         self._api_hash = api_hash
         self._owner = None
         self._message_id = int(os.getenv('DB_PATH'))
+        self._fernet = Fernet(os.getenv('DB_PASSWORD'))
 
     async def get_owner(self) -> User:
         if self._owner is None:
@@ -111,9 +116,11 @@ class TgClient():
             await client.edit_message('me', self._message_id, placeholder)
 
     def _deserialise_data(self, data_str: str) -> dict:
+        # return json.loads(zlib.decompress(self._fernet.decrypt(data_str.encode())).decode())
         return json.loads(data_str)
 
     def _serialise_data(self, data: dict) -> str:
+        # return self._fernet.encrypt(zlib.compress(json.dumps(data).encode())).decode()
         return json.dumps(data)
 
     def _empty_data(self) -> dict:
