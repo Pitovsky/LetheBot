@@ -23,7 +23,16 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
         else:
             return None
 
+    # Lists of words to construct the bot name
+    adjectives = ["Lovely", "Lively", "Lucid", "Luxurious", "Luminous", "Logical", "Loyal", "Light-hearted", "Loving", "Lustrous"]
+    nouns = ["tiger", "eagle", "lion", "turtle", "panda", "dolphin", "star", "moon", "sun", "flower"]
+
+    # Generate a random bot name
+    adjective = random.choice(adjectives)
+    noun = random.choice(nouns)
     bot_id = random.randint(1, 1000)
+    tg_bot_handle = f"{adjective}_{noun}_{bot_id}_bot"
+
     # Get the BotFather chat
     botfather = await client.get_entity('BotFather')
     # Send the command to create a new bot
@@ -31,11 +40,10 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
     time.sleep(1)
     msg = (await client.get_messages(botfather))[0]
     assert 'Alright, a new bot' in msg.text
-    await client.send_message(botfather, f'Lethe Bot {bot_id}')
+    await client.send_message(botfather, f'{adjective} {noun} {bot_id} Bot')
     time.sleep(1)
     msg = (await client.get_messages(botfather))[0]
     assert 'Now let\'s choose a username' in msg.text
-    tg_bot_handle = f'lethe_test_{bot_id}_bot'
     await client.send_message(botfather, tg_bot_handle)
     time.sleep(1)
     msg = (await client.get_messages(botfather))[0]
