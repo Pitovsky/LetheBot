@@ -5,8 +5,9 @@ import random
 import base64
 import zlib
 import io
+import secrets
 
-from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from telethon import TelegramClient, functions, errors
 from telethon.types import User, Channel, Chat
 from telethon.tl.types import ChannelParticipantsAdmins
@@ -24,7 +25,7 @@ class TgClient():
         self._api_hash = api_hash
         self._owner = None
         self._message_id = int(os.getenv('DB_PATH'))
-        self._fernet = Fernet(os.getenv('DB_PASSWORD'))
+        self._db_enc = AESGCM(base64.urlsafe_b64decode(os.getenv('DB_PASSWORD').encode()))
 
     async def get_owner(self) -> User:
         if self._owner is None:
@@ -111,17 +112,22 @@ class TgClient():
             await client.edit_message('me', self._message_id, json.dumps(self._empty_data()))
 
     async def _write_placeholder_saved_message(self) -> None:
-        placeholder = random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭']) + random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭'])
+        placeholder = (random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿'])
+                       + random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿']))
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
             await client.edit_message('me', self._message_id, placeholder)
 
-    def _deserialise_data(self, data_str: str) -> dict:
-        # return json.loads(zlib.decompress(self._fernet.decrypt(data_str.encode())).decode())
-        return json.loads(data_str)
-
     def _serialise_data(self, data: dict) -> str:
-        # return self._fernet.encrypt(zlib.compress(json.dumps(data).encode())).decode()
+        # nonce = os.urandom(12)  # GCM mode needs 12 fresh bytes every time
+        # data_enc = nonce + self._db_enc.encrypt(nonce, zlib.compress(json.dumps(data).encode()), b"")
+        # return base64.urlsafe_b64encode(data_enc).decode()
         return json.dumps(data)
+
+    def _deserialise_data(self, data_str: str) -> dict:
+        # data_enc = base64.urlsafe_b64decode(data_str.encode())
+        # data_res = self._db_enc.decrypt(data_enc[:12], data_enc[12:], b"")
+        # return json.loads(zlib.decompress(data_res).decode())
+        return json.loads(data_str)
 
     def _empty_data(self) -> dict:
         return {
