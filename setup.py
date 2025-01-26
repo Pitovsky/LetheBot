@@ -32,13 +32,13 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
 
     # Lists of words to construct the bot name
     adjectives = ["Lovely", "Lively", "Lucid", "Luxurious", "Luminous", "Logical", "Loyal", "Light-hearted", "Loving", "Lustrous"]
-    nouns = ["tiger", "eagle", "lion", "turtle", "panda", "dolphin", "star", "moon", "sun", "flower"]
+    nouns = ["tiger", "eagle", "lion", "turtle", "panda", "dolphin", "star", "moon", "sun", "flower", "river", "sloth", "seal", "bottle"]
 
     # Generate a random bot name
     adjective = random.choice(adjectives)
     noun = random.choice(nouns)
-    bot_id = random.randint(1, 1000)
-    tg_bot_handle = f"{adjective}_{noun}_{bot_id}_bot"
+    bot_suffix = random.randint(1, 1000)
+    tg_bot_handle = f"{adjective.lower()}_{noun}_{bot_suffix}_bot"
 
     # Get the BotFather chat
     botfather = await client.get_entity('BotFather')
@@ -47,7 +47,7 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
                          message='/newbot',
                          reply_expected='Alright, a new bot')
     await _assert_dialog(client, botfather,
-                         message=f'{adjective} {noun} {bot_id} Bot',
+                         message=f'{adjective} {noun} {bot_suffix} Bot',
                          reply_expected='Now let\'s choose a username')
     msg = await _assert_dialog(client, botfather,
                          message=tg_bot_handle,
@@ -61,7 +61,7 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
                          message='@' + tg_bot_handle,
                          reply_expected='OK. Send me the new description for the bot.')
     await _assert_dialog(client, botfather,
-                         message=f'You can share your most {adjective} {noun}s with your most trusted people here.'
+                         message=f'You can share your most {adjective.lower()} {noun}s with your most trusted people here.'
                                  f'Click start if such a person sent you their invite link!',
                          reply_expected='Success! Description updated.')
     return token, tg_bot_handle
@@ -102,7 +102,7 @@ def main():
             client.disconnect()
 
     invite_code = str(os.urandom(16).hex())
-    schedule_cron_utc = '25 19 * * *' # TODO localize from default tz
+    schedule_cron_utc = '45 * * * *' # TODO localize from default tz
 
     with open('keys.env', 'w') as envfile:
         envfile.write(f"""
@@ -114,7 +114,7 @@ TG_SESSION_STR={session_str}
 INVITE_CODE={invite_code}
 DB_PASSWORD={db_password}
 DB_PATH={db_path}
-SCHEDULE_CRON_UTC={schedule_cron_utc}
+SCHEDULE_CRON_UTC='{schedule_cron_utc}'
 """)
 
     print('Deploying the main function...')

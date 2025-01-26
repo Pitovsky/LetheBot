@@ -195,7 +195,7 @@ class LetheBot:
                                                          chat_id=user['id'], message_id=user['db_msg_id'],)
 
 
-    async def get_chat(self, update: Update) -> None:
+    async def get_chat(self, _: Optional[Update]) -> None:
         data = await self.tg_client._read_saved_message()
         chats = await self.tg_client.get_chats()
         total_chats = len(chats)
@@ -229,7 +229,7 @@ class LetheBot:
         if isinstance(selected_chat.entity, Chat) and selected_chat.entity.admin_rights is not None:
             message_parts.append(f'*Caution, you are the admin of that chat*')
         await self._send_message(
-            update.effective_chat.id,
+            owner.id,
             '\n\n'.join(message_parts),
             reply_markup=reply_markup,
         )
@@ -369,7 +369,7 @@ class LetheBot:
     async def process_single_webhook(self, token: str, request_json):
         self.bot = Bot(token=token)
         await self.bot.initialize()
-        if 'triggerType' in request_json:
-            pass # TODO scheduled batches go here
+        if request_json.get('triggerType') == 'daily_reminder':
+            await self.get_chat(None)
         else:
             await self._reply_handler(Update.de_json(data=request_json, bot=self.bot), context=None)

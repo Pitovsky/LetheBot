@@ -18,11 +18,13 @@ packages:
         main: ""
         web: true
         triggers:
-          - name: daily_batch
+          - name: daily_reminder
             sourceType: scheduler
             sourceDetails:
               cron: '${SCHEDULE_CRON_UTC}'
-              withBody: '{"triggerType": "daily_batch"}'
+              withBody: {
+                triggerType: 'daily_reminder'
+              }
         limits:
           timeout: 30000
-          memory: 256
+          memory: 512
