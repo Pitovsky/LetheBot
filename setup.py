@@ -13,6 +13,13 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 
+async def _assert_dialog(client: TelegramClient, entity, message: str, reply_expected: str):
+    await client.send_message(entity, message)
+    time.sleep(1)
+    reply = (await client.get_messages(entity))[0]
+    assert reply_expected in reply.text
+    return reply
+
 async def create_bot(client: TelegramClient) -> tuple[str, str]:
     def _extract_token(message):
         pattern = r"Use this token to access the HTTP API: ([a-zA-Z0-9_\-:]+)"
@@ -36,19 +43,27 @@ async def create_bot(client: TelegramClient) -> tuple[str, str]:
     # Get the BotFather chat
     botfather = await client.get_entity('BotFather')
     # Send the command to create a new bot
-    await client.send_message(botfather, '/newbot')
-    time.sleep(1)
-    msg = (await client.get_messages(botfather))[0]
-    assert 'Alright, a new bot' in msg.text
-    await client.send_message(botfather, f'{adjective} {noun} {bot_id} Bot')
-    time.sleep(1)
-    msg = (await client.get_messages(botfather))[0]
-    assert 'Now let\'s choose a username' in msg.text
-    await client.send_message(botfather, tg_bot_handle)
-    time.sleep(1)
-    msg = (await client.get_messages(botfather))[0]
-    assert 'Done! Congratulations on your new bot.' in msg.text
+    await _assert_dialog(client, botfather,
+                         message='/newbot',
+                         reply_expected='Alright, a new bot')
+    await _assert_dialog(client, botfather,
+                         message=f'{adjective} {noun} {bot_id} Bot',
+                         reply_expected='Now let\'s choose a username')
+    msg = await _assert_dialog(client, botfather,
+                         message=tg_bot_handle,
+                         reply_expected='Done! Congratulations on your new bot.')
     token = _extract_token(msg.text)
+
+    await _assert_dialog(client, botfather,
+                         message='/setdescription',
+                         reply_expected='Choose a bot to change description.')
+    await _assert_dialog(client, botfather,
+                         message='@' + tg_bot_handle,
+                         reply_expected='OK. Send me the new description for the bot.')
+    await _assert_dialog(client, botfather,
+                         message=f'You can share your most {adjective} {noun}s with your most trusted people here.'
+                                 f'Click start if such a person sent you their invite link!',
+                         reply_expected='Success! Description updated.')
     return token, tg_bot_handle
 
 async def init_db(client: TelegramClient) -> str:

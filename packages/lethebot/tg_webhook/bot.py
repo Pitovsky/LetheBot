@@ -132,7 +132,7 @@ class LetheBot:
         ]
         data_serialised = self.tg_client._serialise_data(data)
         for user in data['trusted'].values():
-            if 'voted' not in user:
+            if not user.get('voted'):
                 await self.bot.edit_message_text(data_serialised,
                                                  chat_id=user['id'],
                                                  message_id=user['db_msg_id'],
@@ -143,10 +143,10 @@ class LetheBot:
         if str(update.effective_chat.id) in data['trusted']:
             num_votes = 0
             for user in data['trusted'].values():
-                if 'voted' in user and user['voted']:
+                if user.get('voted'):
                     num_votes += 1
             trustee = data['trusted'][str(update.effective_chat.id)]
-            if 'voted' not in trustee:
+            if not trustee.get('voted'):
                 trustee['voted'] = True
                 num_votes += 1
                 if num_votes < 2:
