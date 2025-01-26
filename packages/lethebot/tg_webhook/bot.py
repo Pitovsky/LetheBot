@@ -52,12 +52,12 @@ class LetheBot:
             )
             await self._send_message(
                 update.effective_chat.id,
-                f"Please send the following message to 2 people you trust.\nYou will be able to recover your chats if they tell me you are safe.",
+                f"Please send the following message to at least 2 people you trust.\nYou will be able to recover your chats if they tell me you are safe.",
                 update_alarm_message=False,
             )
             await self._send_message(
                 update.effective_chat.id,
-                helpers.escape_markdown(f"Dear friend, please press here\nhttps://t.me/{self.bot.username}?start={self.invite_code}."),
+                helpers.escape_markdown(f"Dear friend, please register with this bot.\nIt will help me later. Thank you\n\nhttps://t.me/{self.bot.username}?start={self.invite_code}."),
                 update_alarm_message=False,
             )
             keyboard = InlineKeyboardMarkup([
@@ -344,7 +344,7 @@ class LetheBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
             alarm_msg = await self.bot.send_message(
                 chat_id=chat_id,
-                text=f'🚨🚨🚨🚨🚨\n\n\nВ ЭКСТРЕННОЙ СИТУАЦИИ\nНАЖМИТЕ SOS\n\n\n🚨🚨🚨🚨🚨',
+                text=f'LETHE🚨\n\n\nSOS\n\n\n🚨🚨🚨🚨🚨',
                 reply_markup=reply_markup,
                 parse_mode=constants.ParseMode.MARKDOWN,
             )
