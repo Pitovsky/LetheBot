@@ -184,7 +184,7 @@ class TgClient():
 
     async def _clear_saved_message(self) -> None:
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
-            await client.edit_message('me', self._message_id, json.dumps(self._empty_data()))
+            await client.edit_message('me', self._message_id, self._serialise_data(self._empty_data()))
 
     async def _write_placeholder_saved_message(self) -> None:
         placeholder = (random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿'])
@@ -193,16 +193,16 @@ class TgClient():
             await client.edit_message('me', self._message_id, placeholder)
 
     def _serialise_data(self, data: dict) -> str:
-        # nonce = os.urandom(12)  # GCM mode needs 12 fresh bytes every time
-        # data_enc = nonce + self._db_enc.encrypt(nonce, zlib.compress(json.dumps(data).encode()), b"")
-        # return base64.urlsafe_b64encode(data_enc).decode()
-        return json.dumps(data)
+        nonce = os.urandom(12)  # GCM mode needs 12 fresh bytes every time
+        data_enc = nonce + self._db_enc.encrypt(nonce, zlib.compress(json.dumps(data).encode()), b"")
+        return base64.urlsafe_b64encode(data_enc).decode()
+        # return json.dumps(data)
 
     def _deserialise_data(self, data_str: str) -> dict:
-        # data_enc = base64.urlsafe_b64decode(data_str.encode())
-        # data_res = self._db_enc.decrypt(data_enc[:12], data_enc[12:], b"")
-        # return json.loads(zlib.decompress(data_res).decode())
-        return json.loads(data_str)
+        data_enc = base64.urlsafe_b64decode(data_str.encode())
+        data_res = self._db_enc.decrypt(data_enc[:12], data_enc[12:], b"")
+        return json.loads(zlib.decompress(data_res).decode())
+        # return json.loads(data_str)
 
     def _empty_data(self) -> dict:
         return {
