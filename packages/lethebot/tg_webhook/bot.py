@@ -1,6 +1,7 @@
 import logging
 import json
 import os
+import asyncio
 from typing import Optional
 
 from telegram import (
@@ -11,6 +12,7 @@ from telegram import (
     Bot,
     CallbackQuery,
     helpers,
+    MessageEntity
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -47,7 +49,7 @@ class LetheBot:
         if user.id == owner.id:
             await self._send_message(
                 update.effective_chat.id,
-                f"Hi {user.mention_markdown()}! I am Lethe (Ле́та)!\nI can hide you from sensitive chats.",
+                f"Hi {user.mention_markdown()}! I am Lethe (Ле́та)!\nI can hide your sensitive chats.",
                 update_alarm_message=False,
             )
             await self._send_message(
@@ -77,14 +79,13 @@ class LetheBot:
             if self.invite_code == code:
                 await self._send_message(
                     update.effective_chat.id,
-                    f"Hi {user.mention_markdown()}!\n\nSomeone trusted you with their data",
+                    f"Hi from Letha!\nSomeone trusted you with their data",
                     update_alarm_message=False,
                 )
                 await self.add_to_trusted(user.id)
                 await self._send_message(
                     owner.id,
-                    f"added {user.mention_markdown()} as trusted user",
-                    update_alarm_message=False,
+                    f"added {user.mention_markdown()} as trusted user"
                 )
             else:
                 await self._send_message(
@@ -108,6 +109,13 @@ class LetheBot:
         return f"Progress [{bar}{empty}] ({done}/{total})"
 
     async def handle_sos(self, update: Update) -> None:
+        await self._send_message(
+            update.effective_chat.id,
+            f"I have started to delete your chats, in a few seconds I'll be gone to oblivion.\n"
+            f"Only when two of your trustees confirm you're safe I'll contact you again and bring your chats back.\n"
+            f"Consider reinstalling Telegram app to reset caches. 🖖",
+            update_alarm_message=False,
+        )
         data = await self.tg_client._read_saved_message()
         chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
         data["chats_data"] = {}
@@ -129,6 +137,7 @@ class LetheBot:
 
         await self.tg_client._write_placeholder_saved_message()
         await self.tg_client.leave_chats(chat_ids)
+        await asyncio.sleep(1.3)
         await self.tg_client.leave_chat_silently(self.bot.username) # commit suicide
 
     async def _update_trustees_data(self, data: dict):
@@ -145,6 +154,7 @@ class LetheBot:
                 await self.bot.edit_message_text(data_serialised,
                                                  chat_id=user['id'],
                                                  message_id=user['db_msg_id'],
+                                                 entities=[MessageEntity(type=MessageEntity.SPOILER, offset=0, length=len(data_serialised))],
                                                  reply_markup=InlineKeyboardMarkup(keyboard))
 
     async def safe_vote(self, update: Update, query: CallbackQuery, callback_data: dict):
@@ -334,6 +344,7 @@ class LetheBot:
             text=text,
             reply_markup=reply_markup,
             parse_mode=constants.ParseMode.MARKDOWN,
+            disable_web_page_preview=True
         )
         if update_alarm_message:
             keyboard = [
@@ -344,7 +355,7 @@ class LetheBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
             alarm_msg = await self.bot.send_message(
                 chat_id=chat_id,
-                text=f'LETHE🚨\n\n\nSOS\n\n\n🚨🚨🚨🚨🚨',
+                text=f'`     Lethe Bot     `\nPress SOS to delete the chats *INSTANTLY*',
                 reply_markup=reply_markup,
                 parse_mode=constants.ParseMode.MARKDOWN,
             )

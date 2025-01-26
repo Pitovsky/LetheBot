@@ -12,7 +12,7 @@ from telethon import TelegramClient, functions, errors
 from telethon.types import User, Channel, Chat
 from telethon.tl.types import ChannelParticipantsAdmins
 from telethon.sessions import StringSession
-from telethon.types import User
+from telethon.types import User, MessageEntitySpoiler
 
 from telegram import helpers
 
@@ -200,11 +200,13 @@ class TgClient():
 
     async def _write_saved_message(self, data: dict) -> None:
         async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
-            await client.edit_message('me', self._message_id, self._serialise_data(data))
+            text = self._serialise_data(data)
+            await client.edit_message('me', self._message_id,
+                                      text=text,
+                                      formatting_entities=[MessageEntitySpoiler(offset=0, length=len(text))])
 
     async def _clear_saved_message(self) -> None:
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
-            await client.edit_message('me', self._message_id, self._serialise_data(self._empty_data()))
+        await self._write_saved_message(self._empty_data())
 
     async def _write_placeholder_saved_message(self) -> None:
         placeholder = (random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿'])

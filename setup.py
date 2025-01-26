@@ -15,7 +15,7 @@ from telethon.sessions import StringSession
 
 async def _assert_dialog(client: TelegramClient, entity, message: str, reply_expected: str):
     await client.send_message(entity, message)
-    time.sleep(1)
+    time.sleep(1.9 + random.random() * 0.7)
     reply = (await client.get_messages(entity))[0]
     assert reply_expected in reply.text
     return reply
@@ -92,7 +92,7 @@ def main():
         try:
             session_str = client.session.save()
             if bot_token is None:
-                print('Creating TG bot...')
+                print('Creating TG bot (may take a minute)...')
                 bot_token, bot_handle = client.loop.run_until_complete(create_bot(client))
             if db_path is None:
                 print('Initializing database...')
@@ -117,7 +117,7 @@ DB_PATH={db_path}
 SCHEDULE_CRON_UTC='{schedule_cron_utc}'
 """)
 
-    print('Deploying the main function...')
+    print('Deploying the main function (may take a few minutes)...')
     result = subprocess.run(['doctl', 'sls', 'deploy', '.', '--include', 'lethebot/tg_webhook', '--env', 'keys.env'])
     if result.returncode != 0:
         exit(result.returncode)
