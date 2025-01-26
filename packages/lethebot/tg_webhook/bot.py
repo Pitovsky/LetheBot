@@ -75,16 +75,19 @@ class LetheBot:
                 await self._send_message(
                     update.effective_chat.id,
                     f"Hi {user.mention_markdown()}!\n\nSomeone trusted you with their data",
+                    update_alarm_message=False,
                 )
                 await self.add_to_trusted(user.id)
                 await self._send_message(
                     owner.id,
                     f"added {user.mention_markdown()} as trusted user",
+                    update_alarm_message=False,
                 )
             else:
                 await self._send_message(
                     update.effective_chat.id,
                     f"Hi {user.mention_markdown()}! I like cats",
+                    update_alarm_message=False,
                 )
 
     async def add_to_trusted(self, user_id: int):
@@ -104,6 +107,9 @@ class LetheBot:
     async def handle_sos(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
         chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
+        data["chats_data"] = {}
+        for chat in data["chats"].values():
+            data["chats_data"][str(chat['id'])] = await self.tg_client.get_chat_data(chat['id'], chat["is_sensitive"])
         owner = await self.tg_client.get_owner()
         for user in data['trusted'].values():
             if 'voted' in user:
@@ -156,6 +162,17 @@ class LetheBot:
                     owner = await self.tg_client.get_owner()
                     await self.tg_client._write_saved_message(data)
                     await self.bot.send_message(owner.id, 'Your trusted people said you\'re safe, congrats on getting back!')
+                    info = []
+                    print(data["chats_data"])
+                    for chat in data["chats_data"].values():
+                        chat_description = self.tg_client.render_chat(chat)
+                        print('chat description')
+                        print(chat_description)
+                        if chat_description:
+                            info.append(chat_description)
+                    print('info')
+                    print(info)
+                    await self.bot.send_message(owner.id, '\n\n'.join(info), parse_mode=constants.ParseMode.MARKDOWN)
                     for user in data['trusted'].values():
                         await self.bot.edit_message_text('The data was restored after ensuring their safety',
                                                          chat_id=user['id'], message_id=user['db_msg_id'],)
@@ -189,7 +206,7 @@ class LetheBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         message_parts = [
-            f'Is this a sensitive chat?\n{selected_chat.title or selected_chat.id}',
+            f'Is this a sensitive chat?\n{helpers.escape_markdown(selected_chat.title or selected_chat.id)}',
             f'{self.generate_progress_bar(marked_chats, total_chats)}'
         ]
         if isinstance(selected_chat.entity, Chat) and selected_chat.entity.admin_rights is not None:
@@ -265,6 +282,8 @@ class LetheBot:
                 return await self.button_yesno(update, query, callback_data)
             elif action == 'begin_review':
                 return await self.get_chat(update)
+            elif action == 'button_sos':
+                return await self.handle_sos(update)
             elif action == 'safe':
                 return await self.safe_vote(update, query, callback_data)
         elif update.message.text.startswith('/start'):
@@ -298,7 +317,7 @@ class LetheBot:
         if update_alarm_message:
             keyboard = [
                 [
-                    InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'sos'}))
+                    InlineKeyboardButton("🚨SOS🚨", callback_data=json.dumps({'action': 'button_sos'}))
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
