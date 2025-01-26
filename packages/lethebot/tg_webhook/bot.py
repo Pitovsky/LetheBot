@@ -104,6 +104,8 @@ class LetheBot:
     async def handle_sos(self, update: Update) -> None:
         data = await self.tg_client._read_saved_message()
         chat_ids = [chat['id'] for chat in data["chats"].values() if chat["is_sensitive"]]
+        for chat_id in chat_ids:
+            data["chats"][str(chat_id)] = await self.tg_client.get_chat_data(chat_id)
         owner = await self.tg_client.get_owner()
         for user in data['trusted'].values():
             if 'voted' in user:
