@@ -282,7 +282,7 @@ class LetheBot:
                 chat_description = await self.tg_client.get_chat_data(chat['id'], True)
                 # print(chat_description)
                 if chat_description:
-                    info.append(chat_description)
+                    info.append(self.tg_client.render_chat(chat_description))
             except BaseException as e:
                 logger.warning(f'failed to generate chat description for {str(chat)}', exc_info=e)
                 pass

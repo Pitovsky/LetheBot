@@ -14,6 +14,8 @@ from telethon.tl.types import ChannelParticipantsAdmins
 from telethon.sessions import StringSession
 from telethon.types import User
 
+from telegram import helpers
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +60,13 @@ class TgClient():
                 entity = await client.get_entity(chat_id)
                 print(entity)
                 if isinstance(entity, User):
-                    public_link = entity.username or f"[{entity.first_name} {entity.last_name}](https://web.telegram.org/a/#{chat_id})"
+                    if entity.username:
+                        public_link = f"@{entity.username}"
+                    else:
+                        public_link = f"[{entity.first_name or ''} {entity.last_name or ''}](https://web.telegram.org/a/#{chat_id})"
                     return {
                         "id": chat_id,
-                        "title": f"{entity.first_name} {entity.last_name}",
+                        "title": f"{entity.first_name or ''} {entity.last_name or ''}",
                         "public_link": public_link,
                         'is_sensitive': is_sensitive,
                     }
@@ -70,7 +75,7 @@ class TgClient():
                         return {
                             "id": chat_id,
                             "title": entity.title,
-                            "public_link": f"https://t.me/{entity.username}",
+                            "public_link": f"@{entity.username}",
                             'is_sensitive': is_sensitive,
                         }
                     try:
@@ -87,7 +92,10 @@ class TgClient():
                             user_iter = client.iter_participants(entity, filter=ChannelParticipantsAdmins, limit=1)
                             async for user in user_iter:
                                 # any one will do
-                                public_link = user.username or f"[{user.first_name} {user.last_name}](https://web.telegram.org/a/#{user.id})"
+                                if user.username:
+                                    public_link = f"@{user.username}"
+                                else:
+                                    public_link = f"[{user.first_name or ''} {user.last_name or ''}](https://web.telegram.org/a/#{user.id})"
                                 return {
                                     "id": chat_id,
                                     "title": entity.title,
@@ -115,7 +123,10 @@ class TgClient():
                         user_iter = client.iter_participants(entity, filter=ChannelParticipantsAdmins, limit=1)
                         async for user in user_iter:
                             # any one will do
-                            public_link = user.username or f"[{user.first_name} {user.last_name}](https://web.telegram.org/a/#{user.id})"
+                            if user.username:
+                                public_link = f"@{user.username}"
+                            else:
+                                public_link = f"[{user.first_name or ''} {user.last_name or ''}](https://web.telegram.org/a/#{user.id})"
                             return {
                                 "id": chat_id,
                                 "title": entity.title,
@@ -129,11 +140,11 @@ class TgClient():
     def render_chat(self, chat_data: dict) -> str:
         if chat_data.get('is_sensitive'):
             if 'public_link' in chat_data:
-                return f'{chat_data["title"]} {chat_data["public_link"]}'
+                return f'{chat_data["title"]} {helpers.escape_markdown(chat_data["public_link"])}'
             if 'invite_link' in chat_data:
-                return f'{chat_data["title"]} [invite link]({chat_data["invite_link"]})'
+                return f'{chat_data["title"]} join via [invite link]({chat_data["invite_link"]})'
             if 'admin' in chat_data:
-                return f'{chat_data["title"]} {chat_data["admin"]}'
+                return f'{chat_data["title"]} contact admin {chat_data["admin"]}'
             return f'{chat_data["title"]} {chat_data["id"]}'
 
     async def get_chat_description(self, chat_id) -> str:
