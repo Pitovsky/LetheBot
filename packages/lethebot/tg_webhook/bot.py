@@ -29,6 +29,8 @@ from tg_client import TgClient
 
 logger = logging.getLogger(__name__)
 
+NUM_TRUSTEES_TO_CONFIRM = 1
+
 
 class LetheBot:
 
@@ -168,7 +170,7 @@ class LetheBot:
             if not trustee.get('voted'):
                 trustee['voted'] = True
                 num_votes += 1
-                if num_votes < 2:
+                if num_votes < NUM_TRUSTEES_TO_CONFIRM:
                     await query.edit_message_text('You voted they\'re safe, now waiting for other trusted people to vote')
                     await self._update_trustees_data(data)
                 else:
@@ -233,7 +235,7 @@ class LetheBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         message_parts = [
-            f'Is this a sensitive chat?\n{helpers.escape_markdown(selected_chat.title or selected_chat.id)}',
+            f'Is this a sensitive chat?\n{helpers.escape_markdown(selected_chat.title or str(selected_chat.id))}',
             f'{self.generate_progress_bar(marked_chats, total_chats)}'
         ]
         if isinstance(selected_chat.entity, Chat) and selected_chat.entity.admin_rights is not None:
