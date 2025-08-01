@@ -372,8 +372,8 @@ class LetheBot:
             .concurrent_updates(True)
             .build()
         )
-        application.add_handler(MessageHandler(filters.ALL, self._reply_handler))
 
+        application.add_handler(MessageHandler(filters.ALL, self._reply_handler))
         application.add_handler(CallbackQueryHandler(self._reply_handler))
 
         return application
