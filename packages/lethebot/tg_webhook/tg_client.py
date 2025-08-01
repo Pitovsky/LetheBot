@@ -22,29 +22,27 @@ logger = logging.getLogger(__name__)
 
 class TgClient():
     def __init__(self, session, api_id, api_hash):
-        self._session = session
-        self._api_id = api_id
-        self._api_hash = api_hash
+        self._api_client = TelegramClient(StringSession(session), api_id, api_hash)
         self._owner = None
         self._message_id = int(os.getenv('DB_PATH'))
         self._db_enc = AESGCM(base64.urlsafe_b64decode(os.getenv('DB_PASSWORD').encode()))
 
     async def get_owner(self) -> User:
         if self._owner is None:
-            async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+            async with self._api_client as client:
                 self._owner = await client.get_me()
         return self._owner
 
     async def get_chats(self) -> None:
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             return await client.get_dialogs()
 
     async def leave_chat_silently(self, chat_id: str):
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             await client.delete_dialog(chat_id)
 
     async def leave_chats(self, chat_ids: list[int]) -> None:
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             for chat_id in chat_ids:
                 entity = await client.get_entity(chat_id)
                 print('entity')
@@ -56,7 +54,7 @@ class TgClient():
 
     async def get_chat_data(self, chat_id: int, is_sensitive: bool) -> dict:
         try:
-            async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+            async with self._api_client as client:
                 entity = await client.get_entity(chat_id)
                 print(entity)
                 if isinstance(entity, User):
@@ -150,14 +148,14 @@ class TgClient():
     # DB methods (TODO - move)
 
     async def _read_saved_message(self) -> dict:
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             message = await client.get_messages('me', ids=self._message_id)
             if message.text == '🦥':
                 return self._empty_data()
             return self._deserialise_data(message.text)
 
     async def _write_saved_message(self, data: dict) -> None:
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             text = self._serialise_data(data)
             await client.edit_message('me', self._message_id,
                                       text=text,
@@ -169,7 +167,7 @@ class TgClient():
     async def _write_placeholder_saved_message(self) -> None:
         placeholder = (random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿'])
                        + random.choice(['🦮', '🐈‍⬛', '🦣', '🦫', '🦭', '🐿']))
-        async with TelegramClient(StringSession(self._session), self._api_id, self._api_hash) as client:
+        async with self._api_client as client:
             await client.edit_message('me', self._message_id, placeholder)
 
     def _serialise_data(self, data: dict) -> str:

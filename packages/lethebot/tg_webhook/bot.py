@@ -37,10 +37,11 @@ class LetheBot:
     bot: Optional[Bot]
 
     def __init__(self):
-        self.session = os.environ.get('TG_SESSION_STR')
-        self.api_id = os.environ.get('TG_API_ID')
-        self.api_hash = os.environ.get('TG_API_HASH')
-        self.tg_client = TgClient(self.session, self.api_id, self.api_hash)
+        self.tg_client = TgClient(
+            session=os.environ.get('TG_SESSION_STR'),
+            api_id=int(os.environ.get('TG_API_ID')),
+            api_hash=os.environ.get('TG_API_HASH'),
+        )
         self.invite_code = os.environ.get('INVITE_CODE')
         self.bot = None
 
