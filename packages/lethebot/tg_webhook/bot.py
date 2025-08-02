@@ -252,6 +252,14 @@ class LetheBot:
         await self.tg_client._clear_saved_message()
 
 
+    async def get_saved_message(self, update: Update):
+        data = await self.tg_client._read_saved_message()
+        await self._send_message(
+            update.effective_chat.id,
+            helpers.escape_markdown(str(data)),
+        )
+
+
     async def button_yesno(self, update: Update, query: CallbackQuery, callback_data: dict):
         data = await self.tg_client._read_saved_message()
         if callback_data['action'] == 'yes':
@@ -332,6 +340,8 @@ class LetheBot:
             return await self.get_restore_info(update)
         elif update.message.text == '/sos':
             return await self.handle_sos(update)
+        elif update.message.text == '/db':
+            return await self.get_saved_message(update)
         print(f'unhandled update {update}')
 
 
